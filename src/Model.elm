@@ -1,4 +1,4 @@
-module Model exposing (Feed, Photo)
+module Model exposing (Feed, Id, Photo)
 
 
 type alias Id =
