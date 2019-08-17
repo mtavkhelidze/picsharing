@@ -1,4 +1,6 @@
-module Model exposing (Feed, Id, Photo)
+module Model exposing (Feed, Id, Model, Photo, initialModel)
+
+import Http
 
 
 type alias Id =
@@ -17,3 +19,18 @@ type alias Photo =
 
 type alias Feed =
     List Photo
+
+
+type alias Model =
+    { feed : Maybe Feed
+    , error : Maybe Http.Error
+    , queue : Feed
+    }
+
+
+initialModel : Model
+initialModel =
+    { feed = Nothing
+    , error = Nothing
+    , queue = []
+    }

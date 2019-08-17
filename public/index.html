@@ -23,9 +23,18 @@
 <div id="main" class="main"></div>
 <script src="picshare.js"></script>
 <script>
-    Elm.Picshare.init({
-        node: document.getElementById("main"),
-    });
+    (() => {
+        const listen = app => url => {
+            const socket = new WebSocket(url);
+            socket.onmessage = event => app.ports.receive.send(event.data);
+        };
+
+        const app = Elm.Picshare.init({
+            node: document.getElementById("main"),
+        });
+        app.ports.listen.subscribe(listen(app));
+
+    })();
 </script>
 </body>
 </html>
