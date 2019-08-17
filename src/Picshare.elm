@@ -3,48 +3,65 @@ module Picshare exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (..)
-
-
-type Msg
-    = ToggleLike
-    | UpdateComment String
-    | SaveComment
+import Message exposing (..)
+import Model exposing (Feed, Photo)
+import Service exposing (fetchPhotoFeed)
 
 
 type alias Model =
-    { url : String
-    , caption : String
-    , liked : Bool
-    , comments : List String
-    , newComment : String
-    }
+    { feed : Maybe Feed }
 
 
 initialModel : Model
 initialModel =
-    { url = baseUrl ++ "/1.jpg"
-    , caption = "Surfing"
-    , liked = False
-    , comments = [ "Bazinga!" ]
-    , newComment = ""
-    }
+    { feed = Nothing }
 
 
-update : Msg -> Model -> Model
+toggleLike : Photo -> Photo
+toggleLike photo =
+    { photo | liked = not photo.liked }
+
+
+updateComment : String -> Photo -> Photo
+updateComment txt photo =
+    { photo | newComment = txt }
+
+
+updateFeed : (Photo -> Photo) -> Maybe Photo -> Maybe Photo
+updateFeed updatePhoto maybePhoto =
+    Maybe.map updatePhoto maybePhoto
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ToggleLike ->
-            { model | liked = not model.liked }
+        --        ToggleLike ->
+        --            ( { model | photo = updateFeed toggleLike model.photo }
+        --            , Cmd.none
+        --            )
+        --
+        --        UpdateComment txt ->
+        --            ( { model | photo = updateFeed (updateComment txt) model.photo }
+        --            , Cmd.none
+        --            )
+        --
+        --        SaveComment ->
+        --            ( { model | photo = updateFeed saveNewComment model.photo }
+        --            , Cmd.none
+        --            )
+        LoadFeed (Ok feed) ->
+            ( { model | feed = Just feed }
+            , Cmd.none
+            )
 
-        UpdateComment txt ->
-            { model | newComment = txt }
+        LoadFeed (Err _) ->
+            ( model, Cmd.none )
 
-        SaveComment ->
-            saveNewComment model
+        _ ->
+            ( model, Cmd.none )
 
 
-saveNewComment : Model -> Model
+saveNewComment : Photo -> Photo
 saveNewComment model =
     let
         comment =
@@ -61,14 +78,23 @@ saveNewComment model =
             }
 
 
+viewFeed : Maybe Feed -> Html Msg
+viewFeed maybeFeed =
+    case maybeFeed of
+        Just feed ->
+            div [] (List.map viewDetailedPhoto feed)
+
+        Nothing ->
+            div [ class "loading-feed" ] [ text "Loading feed..." ]
+
+
 view : Model -> Html Msg
 view model =
     div []
         [ div [ class "header" ]
-            [ h1 [] [ text "Picshare" ] ]
+            [ h1 [] [ text "Picture Share v2.0" ] ]
         , div [ class "content-flow" ]
-            [ viewDetailedPhoto model
-            ]
+            [ viewFeed model.feed ]
         ]
 
 
@@ -92,33 +118,35 @@ viewCommentList comments =
                 ]
 
 
-viewComments : Model -> Html Msg
-viewComments model =
+viewComments : Photo -> Html Msg
+viewComments photo =
     div []
-        [ viewCommentList model.comments
+        [ viewCommentList photo.comments
         , Html.form
             [ class "new-comment"
-            , onSubmit SaveComment
+
+            -- , onSubmit SaveComment
             ]
             [ input
                 [ type_ "text"
                 , placeholder "Add a comment"
-                , value model.newComment
-                , onInput UpdateComment
+                , value photo.newComment
+
+                -- , onInput UpdateComment
                 ]
                 []
             , button
-                [ disabled (String.isEmpty model.newComment) ]
+                [ disabled (String.isEmpty photo.newComment) ]
                 [ text "Save" ]
             ]
         ]
 
 
-viewLikeButton : Model -> Html Msg
-viewLikeButton pic =
+viewLikeButton : Photo -> Html Msg
+viewLikeButton photo =
     let
         cx =
-            if pic.liked then
+            if photo.liked then
                 "fa-heart"
 
             else
@@ -128,41 +156,40 @@ viewLikeButton pic =
         [ i
             [ class "fa fa-2x"
             , class cx
-            , onClick ToggleLike
+
+            -- , onClick ToggleLike
             ]
             []
         ]
 
 
-viewDetailedPhoto : Model -> Html Msg
-viewDetailedPhoto model =
-    let
-        buttonClass =
-            if model.liked then
-                "fa-heart"
-
-            else
-                "fa-heart-o"
-    in
+viewDetailedPhoto : Photo -> Html Msg
+viewDetailedPhoto photo =
     div [ class "detailed-photo" ]
-        [ img [ src model.url ] []
+        [ img [ src photo.url ] []
         , div [ class "photo-info" ]
-            [ viewLikeButton model
-            , h2 [ class "caption" ] [ text model.caption ]
-            , viewComments model
+            [ viewLikeButton photo
+            , h2 [ class "caption" ] [ text photo.caption ]
+            , viewComments photo
             ]
         ]
 
 
-baseUrl : String
-baseUrl =
-    "https://programming-elm.com"
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( initialModel, fetchPhotoFeed )
 
 
 main : Program () Model Msg
 main =
-    Browser.sandbox
-        { init = initialModel
+    Browser.element
+        { init = init
         , view = view
         , update = update
+        , subscriptions = subscriptions
         }
